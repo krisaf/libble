@@ -157,10 +157,13 @@ void lble_disconnect(void)
 		opt_mtu = 0;
 	}
 
+	set_state(STATE_DISCONNECTED);
+
 	g_io_channel_shutdown(iochannel, FALSE, NULL);
 	g_io_channel_unref(iochannel);
 	iochannel = NULL;
 
+	g_main_loop_quit(event_loop);
 	g_main_loop_unref(event_loop);
 	event_loop = NULL;
 	g_free(opt_sec_level);
@@ -169,8 +172,6 @@ void lble_disconnect(void)
 	opt_dst_type = NULL;
 	g_free(opt_dst);
 	opt_dst = NULL;
-
-	set_state(STATE_DISCONNECTED);
 }
 
 /* get connection state */
