@@ -7,7 +7,7 @@
 #define VECS_BUTTON_NOTI_VAL	0x003b
 #define VECS_BUTTON_NOTI_CFG	0x003c
 
-static const char *vecs_addr = "84:DD:20:F0:86:AB";
+static const char *dev_addr = "84:DD:20:F0:86:AB";
 
 void noti_handler(uint16_t handle, uint8_t len, const uint8_t *data)
 {
@@ -29,9 +29,9 @@ void noti_handler(uint16_t handle, uint8_t len, const uint8_t *data)
 
 int main(int argc, char **argv)
 {
-	printf("connecting to %s\n", vecs_addr);
+	printf("connecting to %s\n", dev_addr);
 
-	lble_connect(vecs_addr);
+	lble_connect(dev_addr);
 
 	if (lble_get_state() != STATE_CONNECTED) {
 		fprintf(stderr, "error: connection failed\n");
