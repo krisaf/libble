@@ -57,11 +57,10 @@ len: кол-во записываемых байт
 data: адрес буфера, откуда брать данные
 
 ****************************************************************
-void lble_listen(lble_event_handler handler);
+void lble_listen(lble_event_handler handler, void *cb_info);
 
 Зарегистрировать обработчик для событий (notifications) и
 начать слушать
 
 handler: адрес обработчика событий (тип описан в libble.h)
-typedef void (*lble_event_handler)(uint16_t handle, uint8_t len, const uint8_t *data);
-
+typedef void (*lble_event_handler)(uint16_t handle, uint8_t len, const uint8_t *data, const void *cb_info);
