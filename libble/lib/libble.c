@@ -57,6 +57,7 @@ static void set_state(enum state st)
 }
 
 static lble_event_handler lble_evh = NULL;
+static void *lble_cb_info = NULL;
 
 static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 {
@@ -65,7 +66,7 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 
 // calling out hi-level handler
 	if (lble_evh != NULL)
-		lble_evh(get_le16(&pdu[1]), len - 3, &pdu[3]);
+		lble_evh(get_le16(&pdu[1]), len - 3, &pdu[3], lble_cb_info);
 }
 
 static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
@@ -131,7 +132,7 @@ void lble_connect(const char *addr)
 }
 
 /* listen for notifications/indications */
-void lble_listen(lble_event_handler handler)
+void lble_listen(lble_event_handler handler, void *cb_info)
 {
 	if (conn_state != STATE_CONNECTED)
 		return;
@@ -141,6 +142,7 @@ void lble_listen(lble_event_handler handler)
 
 	// setting our own notify/ind high-level handler
 	lble_evh = handler;
+	lble_cb_info = cb_info;
 
 	g_main_loop_run(event_loop);
 }

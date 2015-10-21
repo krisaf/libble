@@ -15,7 +15,7 @@ void sigint(int a)
 	lble_disconnect();
 }
 
-void noti_handler(uint16_t handle, uint8_t len, const uint8_t *data)
+void noti_handler(uint16_t handle, uint8_t len, const uint8_t *data, const void *cb_info)
 {
 	if (handle == VECS_BUTTON_NOTI_VAL && len == 1) {
 		switch (*data) {
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 	lble_write(VECS_BUTTON_NOTI_CFG, 2, (uint8_t *)"\x01\x00");
 
 	printf("listening for notifications\n");
-	lble_listen(noti_handler);
+	lble_listen(noti_handler, NULL);
 
 	return 0;
 }

@@ -9,12 +9,12 @@ enum state {
 	STATE_CONNECTED
 };
 
-typedef void (*lble_event_handler)(uint16_t handle, uint8_t len, const uint8_t *data);
+typedef void (*lble_event_handler)(uint16_t handle, uint8_t len, const uint8_t *data, const void *cb_info);
 
 extern void lble_connect(const char *addr);
 extern void lble_disconnect(void);
 
-extern void lble_listen(lble_event_handler handler);
+extern void lble_listen(lble_event_handler handler, void *cb_info);
 
 extern uint8_t lble_read(uint16_t handle, uint8_t *data);
 extern void lble_write(uint16_t handle, uint8_t len, uint8_t *data);

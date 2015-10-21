@@ -23,7 +23,7 @@ void sigint(int a)
 }
 
 // Обработчик приходящих уведомлений с данным датчиков
-void notify_handler(uint16_t handle, uint8_t len, const uint8_t *data)
+void notify_handler(uint16_t handle, uint8_t len, const uint8_t *data, const void *cb_info)
 {
 	int i;
 	int16_t mpu_data[7];
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
 
 // Регистрируем свой обработчик приема уведомлений и запускаем цикл прослушки	
 	printf("listening for notifications\n");
-	lble_listen(notify_handler);
+	lble_listen(notify_handler, NULL);
 
 	return 0;
 }
