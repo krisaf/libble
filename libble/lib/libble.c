@@ -22,60 +22,56 @@
  *
  */
 
+#include <glib.h>
+
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdbool.h>
 
-#include <glib.h>
+#include "gattrib.h"
 
 #include "libble.h"
+#include "gattutils.h"
 
 #include "lib/sdp.h"
 #include "lib/uuid.h"
 #include "btio/btio.h"
 #include "att.h"
-#include "gattrib.h"
 #include "gatt.h"
-#include "gatttool.h"
 #include "shared/util.h"
 
-static GMainLoop *event_loop;
-static GIOChannel *iochannel = NULL;
-static GAttrib *attrib = NULL;
-
-static char *opt_dst = NULL;
-static char *opt_dst_type = NULL;
-static char *opt_sec_level = NULL;
-
-static int opt_psm = 0;
-static int opt_mtu = 0;
-
-static enum state conn_state;
-
-static void set_state(enum state st)
-{
-	conn_state = st;
-}
-
-static lble_event_handler lble_evh = NULL;
-static void *lble_cb_info = NULL;
+typedef struct {
+	devstate_t conn_state;
+	GMainLoop *event_loop;
+	GIOChannel *iochannel;
+	GAttrib *attrib;
+	uint8_t len;
+	uint8_t *buffer;
+	lble_event_handler evh;
+	void *cb_info;
+} devh_t;
 
 static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 {
+	devh_t *dev = user_data;
+
 	if (pdu[0] != ATT_OP_HANDLE_NOTIFY)
 		return;
 
 // calling out hi-level handler
-	if (lble_evh != NULL)
-		lble_evh(get_le16(&pdu[1]), len - 3, &pdu[3], lble_cb_info);
+	if (dev->evh != NULL)
+		dev->evh(get_le16(&pdu[1]), len - 3, &pdu[3], dev->cb_info);
 }
 
 static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 {
 	uint16_t mtu, cid;
+	devh_t *dev = user_data;
 
 	if (err) {
-		set_state(STATE_DISCONNECTED);
+		dev->conn_state = STATE_DISCONNECTED;
 		fprintf(stderr, "LBLE::ERROR %s\n", err->message);
 		goto done;
 	}
@@ -90,158 +86,168 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 	if (cid == ATT_CID)
 		mtu = ATT_DEFAULT_LE_MTU;
 
-	attrib = g_attrib_new(io, mtu, false);
-	set_state(STATE_CONNECTED);
+	dev->attrib = g_attrib_new(io, mtu, false);
+	dev->conn_state = STATE_CONNECTED;
 done:
-	g_main_loop_quit(event_loop);
+	g_main_loop_quit(dev->event_loop);
 }
 
 static gboolean channel_watcher(GIOChannel *ch, GIOCondition cond, gpointer user_data)
 {
-	lble_disconnect();
+	lble_disconnect(user_data);
 	return FALSE;
 }
 
 
 /* exported functions */
 
+DEVHANDLER lble_newdev()
+{
+	devh_t *dev;
+
+	dev = calloc(1, sizeof(devh_t));
+	if (!dev) {
+		return NULL;
+	}
+	dev->conn_state = STATE_DISCONNECTED;
+	return dev;
+}
+
+void lble_freedev(DEVHANDLER devh)
+{
+	free(devh);
+}
+
 /* connect to BLE device */
-void lble_connect(const char *addr)
+void lble_connect(DEVHANDLER devh, const char *addr)
 {
 	GError *gerr = NULL;
+	devh_t *dev = devh;
 
-	if (conn_state != STATE_DISCONNECTED)
+	if (!dev || dev->conn_state != STATE_DISCONNECTED)
 		return;
 
-	opt_sec_level = g_strdup("low");
-	opt_dst_type = g_strdup("public");
-	opt_dst = g_strdup(addr);
-	event_loop = g_main_loop_new(NULL, FALSE);
+	dev->event_loop = g_main_loop_new(NULL, FALSE);
+	dev->conn_state = STATE_CONNECTING;
 
-	set_state(STATE_CONNECTING);
-
-	iochannel = gatt_connect(NULL, opt_dst, opt_dst_type, opt_sec_level, opt_psm, opt_mtu, connect_cb, &gerr);
-	if (iochannel == NULL) {
-		set_state(STATE_DISCONNECTED);
+	dev->iochannel = gatt_connect(NULL, g_strdup(addr), "public", "low", 0, 0, connect_cb, dev, &gerr);
+	if (dev->iochannel == NULL) {
+		dev->conn_state = STATE_DISCONNECTED;
 		fprintf(stderr, "LBLE::ERROR %s\n", gerr->message);
 		g_error_free(gerr);
 	} else {
-		g_io_add_watch(iochannel, G_IO_HUP, channel_watcher, NULL);
+		g_io_add_watch(dev->iochannel, G_IO_HUP, channel_watcher, dev);
 	}
-
-	g_main_loop_run(event_loop);
+	g_main_loop_run(dev->event_loop);
 }
 
 /* listen for notifications/indications */
-void lble_listen(lble_event_handler handler, void *cb_info)
+void lble_listen(DEVHANDLER devh, lble_event_handler handler, void *cb_info)
 {
-	if (conn_state != STATE_CONNECTED)
+	devh_t *dev = devh;
+
+	if (!dev || dev->conn_state != STATE_CONNECTED)
 		return;
 
-	g_attrib_register(attrib, ATT_OP_HANDLE_NOTIFY, GATTRIB_ALL_HANDLES, events_handler, attrib, NULL);
-//	g_attrib_register(attrib, ATT_OP_HANDLE_IND, GATTRIB_ALL_HANDLES, events_handler, attrib, NULL);
-
 	// setting our own notify/ind high-level handler
-	lble_evh = handler;
-	lble_cb_info = cb_info;
+	dev->evh = handler;
+	dev->cb_info = cb_info;
 
-	g_main_loop_run(event_loop);
+	g_attrib_register(dev->attrib, ATT_OP_HANDLE_NOTIFY, GATTRIB_ALL_HANDLES, events_handler, dev, NULL);
+//	g_attrib_register(dev->attrib, ATT_OP_HANDLE_IND, GATTRIB_ALL_HANDLES, events_handler, dev, NULL);
+
+	g_main_loop_run(dev->event_loop);
 }
 
 /* disconnect from BLE device */
-void lble_disconnect(void)
+void lble_disconnect(DEVHANDLER devh)
 {
-	if (conn_state == STATE_DISCONNECTED)
+	devh_t *dev = devh;
+	GError *gerr = NULL;
+
+	if (!dev || dev->conn_state == STATE_DISCONNECTED)
 		return;
 
-	if (conn_state == STATE_CONNECTED) {
-		g_attrib_unref(attrib);
-		attrib = NULL;
-		opt_mtu = 0;
-	}
+	dev->conn_state = STATE_DISCONNECTED;
 
-	set_state(STATE_DISCONNECTED);
+	g_attrib_unref(dev->attrib);
+	dev->attrib = NULL;
 
-	g_io_channel_shutdown(iochannel, FALSE, NULL);
-	g_io_channel_unref(iochannel);
-	iochannel = NULL;
+//	g_io_channel_shutdown(dev->iochannel, FALSE, &gerr);
+	g_io_channel_unref(dev->iochannel);
+	dev->iochannel = NULL;
 
-	g_main_loop_quit(event_loop);
-	g_main_loop_unref(event_loop);
-	event_loop = NULL;
-	g_free(opt_sec_level);
-	opt_sec_level = NULL;
-	g_free(opt_dst_type);
-	opt_dst_type = NULL;
-	g_free(opt_dst);
-	opt_dst = NULL;
+	g_main_loop_quit(dev->event_loop);
+	g_main_loop_unref(dev->event_loop);
+	dev->event_loop = NULL;
 }
 
 /* get connection state */
-enum state lble_get_state(void)
+devstate_t lble_get_state(DEVHANDLER devh)
 {
-	return conn_state;
-}
+	devh_t *dev = devh;
 
-struct cb_buffer {
-	uint8_t len;
-	uint8_t *buffer;
-};
+	return dev->conn_state;
+}
 
 static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen, gpointer user_data)
 {
-	struct cb_buffer *pbuf = (struct cb_buffer *)user_data;
+	devh_t *dev = user_data;
 
 	if (status != 0) {
 		fprintf(stderr, "LBLE::ERROR value read failed: %s\n", att_ecode2str(status));
-		pbuf->len = 0;
+		dev->len = 0;
 		goto done;
 	}
 
-	pbuf->len = dec_read_resp(pdu, plen, pbuf->buffer, plen);
+	dev->len = dec_read_resp(pdu, plen, dev->buffer, plen);
 
 done:
-	g_main_loop_quit(event_loop);
+	g_main_loop_quit(dev->event_loop);
 }
 
 /* read characteristic by handle */
-uint8_t lble_read(uint16_t handle, uint8_t *data)
+uint8_t lble_read(DEVHANDLER devh, uint16_t handle, uint8_t *data)
 {
-	struct cb_buffer buf;
+	devh_t *dev = devh;
 
-	buf.len = 0;
-	buf.buffer = data;
-
-	if (conn_state != STATE_CONNECTED)
+	if (!dev || dev->conn_state != STATE_CONNECTED)
 		return;
 
-	gatt_read_char(attrib, handle, char_read_cb, &buf);
+	dev->len = 0;
+	dev->buffer = data;
 
-	g_main_loop_run(event_loop);
+	gatt_read_char(dev->attrib, handle, char_read_cb, dev);
 
-	return buf.len;
+	g_main_loop_run(dev->event_loop);
+
+	return dev->len;
 }
 
 static void char_write_cb(guint8 status, const guint8 *pdu, guint16 plen, gpointer user_data)
 {
-    if (status != 0) {
+	devh_t *dev = user_data;
+
+	if (status != 0) {
 		fprintf(stderr, "LBLE::ERROR value write failed: %s\n", att_ecode2str(status));
-		goto done;		
+		goto done;
 	}
 
 done:
-    g_main_loop_quit(event_loop);
+	g_main_loop_quit(dev->event_loop);
 }
 
 /* write characteristic by handle */
-void lble_write(uint16_t handle, uint8_t len, uint8_t *data)
+void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, uint8_t *data)
 {
-	if (conn_state != STATE_CONNECTED)
+	devh_t *dev = devh;
+
+	if (!dev || dev->conn_state != STATE_CONNECTED)
 		return;
 
 	if (data != NULL && len > 0) {
-		gatt_write_char(attrib, handle, data, len, char_write_cb, NULL);
-		g_main_loop_run(event_loop);
+		gatt_write_char(dev->attrib, handle, data, len, char_write_cb, dev);
+		g_main_loop_run(dev->event_loop);
 	}
 }
 

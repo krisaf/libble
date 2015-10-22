@@ -10,9 +10,11 @@
 
 static const char *dev_addr = "84:DD:20:F0:86:AB";
 
+DEVHANDLER devh;
+
 void sigint(int a)
 {
-	lble_disconnect();
+	lble_disconnect(devh);
 }
 
 void noti_handler(uint16_t handle, uint8_t len, const uint8_t *data, const void *cb_info)
@@ -38,20 +40,22 @@ int main(int argc, char **argv)
 	printf("connecting to %s\n", dev_addr);
 
 	signal(SIGINT, sigint);
-	lble_connect(dev_addr);
+	devh = lble_newdev();
+	lble_connect(devh, dev_addr);
 
-	if (lble_get_state() != STATE_CONNECTED) {
+	if (lble_get_state(devh) != STATE_CONNECTED) {
 		fprintf(stderr, "error: connection failed\n");
 		return -1;
 	}
 	printf("connection successful\n");
 
 	printf("enabling notifications for button events...\n");
-	lble_write(VECS_BUTTON_NOTI_CFG, 2, (uint8_t *)"\x01\x00");
+	lble_write(devh, VECS_BUTTON_NOTI_CFG, 2, (uint8_t *)"\x01\x00");
 
 	printf("listening for notifications\n");
-	lble_listen(noti_handler, NULL);
+	lble_listen(devh, noti_handler, NULL);
 
+	lble_freedev(devh);
 	return 0;
 }
 

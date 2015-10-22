@@ -14,12 +14,14 @@ double speed = 0;
 double time = 0;
 struct timeval t_old, t_new;
 
+DEVHANDLER devh;
+
 // Желаемая частота пакетов
 uint8_t pps = 200;
 
 void sigint(int a)
 {
-	lble_disconnect();
+	lble_disconnect(devh);
 }
 
 // Обработчик приходящих уведомлений с данным датчиков
@@ -61,9 +63,10 @@ int main(int argc, char **argv)
 {
 	printf("connecting to %s\n", dev_addr);
 
-	lble_connect(dev_addr);
+	devh = lble_newdev();
+	lble_connect(devh, dev_addr);
 
-	if (lble_get_state() != STATE_CONNECTED) {
+	if (lble_get_state(devh) != STATE_CONNECTED) {
 		fprintf(stderr, "error: connection failed\n");
 		return -1;
 	}
@@ -71,7 +74,7 @@ int main(int argc, char **argv)
 
 // Включение сенсоров (вывод из спящего режима) и задание частоты опроса
 	printf("wake up MPU6000 ans setting %d Hz data rate\n", pps);
-	lble_write(0x002b, 1, &pps);
+	lble_write(devh, 0x002b, 1, &pps);
 
 /*
  * Диапазон шкалы акселерометра
@@ -81,7 +84,7 @@ int main(int argc, char **argv)
  * 3 - +-16g
  */
 	printf("setting accel range...\n");
-	lble_write(0x0025, 1, (uint8_t *)"\x00");
+	lble_write(devh, 0x0025, 1, (uint8_t *)"\x00");
 
 /*
  * Диапазон шкалы гироскопа
@@ -91,7 +94,7 @@ int main(int argc, char **argv)
  * 3 - +-2000 deg/s
  */
 	printf("setting gyro range...\n");
-	lble_write(0x0028, 1, (uint8_t *)"\x00");
+	lble_write(devh, 0x0028, 1, (uint8_t *)"\x00");
 
 // ожидание обновления параметров соединения, запрашиваемых брелком (1 секунда)
 // ОБЯЗАТЕЛЬНО, если требуется получать данные на большой скорости 
@@ -100,11 +103,13 @@ int main(int argc, char **argv)
 
 // Включение уведомлений с данными датчиков
 	printf("enabling notifications on mpu6000 data...\n");
-	lble_write(0x002f, 2, (uint8_t *)"\x01\x00");
+	lble_write(devh, 0x002f, 2, (uint8_t *)"\x01\x00");
 
 // Регистрируем свой обработчик приема уведомлений и запускаем цикл прослушки	
 	printf("listening for notifications\n");
-	lble_listen(notify_handler, NULL);
+	lble_listen(devh, notify_handler, NULL);
+
+	lble_freedev(devh);
 
 	return 0;
 }

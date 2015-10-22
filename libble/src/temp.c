@@ -8,6 +8,8 @@ static const char *dev_addr = "84:DD:20:F0:86:AB";
 
 #define VECS_CHAR_MPU_TEMPERATURE 0x0032
 
+DEVHANDLER devh;
+
 int main(int argc, char **argv)
 {
 	float temp;	
@@ -15,21 +17,23 @@ int main(int argc, char **argv)
 	uint8_t data[2];
 
 	printf("connecting to %s\n", dev_addr);
-	lble_connect(dev_addr);
-	if (lble_get_state() != STATE_CONNECTED) {
+	devh = lble_newdev();
+	lble_connect(devh, dev_addr);
+	if (lble_get_state(devh) != STATE_CONNECTED) {
 		fprintf(stderr, "error: connection failed\n");
 		return -1;
 	}
 	printf("connection successful\n");
 
-	lble_read(VECS_CHAR_MPU_TEMPERATURE, data);
+	lble_read(devh, VECS_CHAR_MPU_TEMPERATURE, data);
 
 	raw_temp = (data[0] << 8) | data[1];
 	temp = raw_temp / 340.0 + 35.0;
 
 	printf("temperature: %.1f *C\n", temp);
 
-	lble_disconnect();
+	lble_disconnect(devh);
+	lble_freedev(devh);
 	return 0;
 }
 
