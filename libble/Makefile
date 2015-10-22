@@ -1,4 +1,5 @@
-BLUEZ_PATH=../bluez
+include $(HOME)/bluez.mk
+
 BLUEZ_SRCS  = lib/bluetooth.c lib/hci.c lib/sdp.c lib/uuid.c
 BLUEZ_SRCS += attrib/att.c attrib/gatt.c attrib/gattrib.c attrib/utils.c
 BLUEZ_SRCS += btio/btio.c

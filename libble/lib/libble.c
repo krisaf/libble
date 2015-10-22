@@ -28,6 +28,9 @@
 
 #include <glib.h>
 
+#include "libble.h"
+
+#include "lib/sdp.h"
 #include "lib/uuid.h"
 #include "btio/btio.h"
 #include "att.h"
@@ -35,8 +38,6 @@
 #include "gatt.h"
 #include "gatttool.h"
 #include "shared/util.h"
-
-#include "libble.h"
 
 static GMainLoop *event_loop;
 static GIOChannel *iochannel = NULL;
@@ -89,7 +90,7 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 	if (cid == ATT_CID)
 		mtu = ATT_DEFAULT_LE_MTU;
 
-	attrib = g_attrib_new(io, mtu);
+	attrib = g_attrib_new(io, mtu, false);
 	set_state(STATE_CONNECTED);
 done:
 	g_main_loop_quit(event_loop);
@@ -244,3 +245,12 @@ void lble_write(uint16_t handle, uint8_t len, uint8_t *data)
 	}
 }
 
+void bswap_128(const void *src, void *dst)
+{
+	const uint8_t *s = (const uint8_t *) src;
+	uint8_t *d = (uint8_t *) dst;
+	int i;
+
+	for (i = 0; i < 16; i++)
+		d[15 - i] = s[i];
+}

@@ -21,5 +21,7 @@ extern void lble_write(uint16_t handle, uint8_t len, uint8_t *data);
 
 extern enum state lble_get_state(void);
 
+extern void bswap_128(const void *src, void *dst);
+
 #endif
 
