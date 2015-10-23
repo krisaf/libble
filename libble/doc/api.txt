@@ -8,35 +8,49 @@ libble API
 Публичные функции:
 
 ****************************************************************
-void lble_connect(const char *addr);
+DEVHANDLER lble_newdev();
+
+Возвращает новый хандлер на устройство.
+****************************************************************
+void lble_freedev(DEVHANDLER devh);
+
+Освободить хандлер
+devh: Хандлер на устройство, полученный от lble_newdev()
+
+****************************************************************
+void lble_connect(DEVHANDLER devh, const char *addr);
 
 Установить соединение с устройством.
+devh: Хандлер на устройство, полученный от lble_newdev()
 addr: Bluetooth адрес в формате "AA:BB:CC:DD:EE:FF"
 Устройство должно быть в состоянии Advertizing, в противном
 случае функция выйдет по таймауту
 
 ****************************************************************
-enum state lble_get_state(void);
-
-enum state {
-	STATE_DISCONNECTED,
-	STATE_CONNECTING,
-	STATE_CONNECTED
-};
+devstate_t lble_get_state(DEVHANDLER devh);
 
 Узнать состояние подключения
-Возвращает перечислимы тип, объявленный в libble.h
+
+devh: Хандлер на устройство, полученный от lble_newdev()
+Возвращает перечислимый тип, объявленный в libble.h
+typedef enum {
+	STATE_DISCONNECTED = 0,
+	STATE_CONNECTING,
+	STATE_CONNECTED
+} devstate_t;
 
 ****************************************************************
-void lble_disconnect(void);
+void lble_disconnect(DEVHANDLER devh);
 
 Разорвать соединение с устройством.
+devh: Хандлер на устройство, полученный от lble_newdev()
 
 ****************************************************************
-uint8_t lble_read(uint16_t handle, uint8_t *data);
+uint8_t lble_read(DEVHANDLER devh, uint16_t handle, uint8_t *data);
 
 Прочитание значение аттрибута по идентификатору
 
+devh: Хандлер на устройство, полученный от lble_newdev()
 handle: уникальный идентификатор аттрибута в таблице атрибутов
 устройства
 
@@ -45,10 +59,11 @@ data: адрес буфера, куда записать данные
 Возвращает количество прочитанных байт либо 0 при ошибке.
 
 ****************************************************************
-void lble_write(uint16_t handle, uint8_t len, uint8_t *data);
+void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, uint8_t *data);
 
 Записать значение аттрибута по идентификатору (без подверждения о записи)
 
+devh: Хандлер на устройство, полученный от lble_newdev()
 handle: уникальный идентификатор аттрибута в таблице атрибутов
 устройства
 
@@ -57,10 +72,11 @@ len: кол-во записываемых байт
 data: адрес буфера, откуда брать данные
 
 ****************************************************************
-void lble_listen(lble_event_handler handler, void *cb_info);
+void lble_listen(DEVHANDLER devh, lble_event_handler handler, void *cb_info);
 
 Зарегистрировать обработчик для событий (notifications) и
 начать слушать
 
+devh: Хандлер на устройство, полученный от lble_newdev()
 handler: адрес обработчика событий (тип описан в libble.h)
 typedef void (*lble_event_handler)(uint16_t handle, uint8_t len, const uint8_t *data, const void *cb_info);
