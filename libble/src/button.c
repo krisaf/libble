@@ -8,8 +8,7 @@
 #define VECS_BUTTON_NOTI_VAL	0x003b
 #define VECS_BUTTON_NOTI_CFG	0x003c
 
-static const char *dev_addr = "84:DD:20:F0:86:AB";
-
+char *dev_addr;
 DEVHANDLER devh;
 
 void sigint(int a)
@@ -37,10 +36,15 @@ void noti_handler(uint16_t handle, uint8_t len, const uint8_t *data, const void 
 
 int main(int argc, char **argv)
 {
-	printf("connecting to %s\n", dev_addr);
+	if ( argc != 2 ) {
+		printf("\nusage: %s <device addr>\n\n", argv[0]);
+		return -1;
+	}
+	dev_addr = argv[1];
 
 	signal(SIGINT, sigint);
 	devh = lble_newdev();
+	printf("connecting to %s\n", dev_addr);
 	lble_connect(devh, dev_addr);
 
 	if (lble_get_state(devh) != STATE_CONNECTED) {

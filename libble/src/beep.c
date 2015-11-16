@@ -4,21 +4,21 @@
 
 #include "libble.h"
 
-static const char *dev_addr = "84:DD:20:F0:86:AB";
-
 #define VECS_CHAR_BEEP_REQUEST	0x003f
 
+char *dev_addr;
 DEVHANDLER devh;
 
 int main(int argc, char **argv)
 {
     uint8_t delay = 1;
 
-	if (argc == 2) {
-			delay = atoi(argv[1]);
-	} else {
-			printf("\nusage: %s <delay between beeps>\n\n", argv[0]);
+	if ( argc != 3 ) {
+		printf("\nusage: %s <device addr> <delay between beeps>\n\n", argv[0]);
+		return -1;
 	}
+	dev_addr = argv[1];
+	delay = atoi(argv[2]);
 
 	printf("connecting to %s\n", dev_addr);
 	devh = lble_newdev();

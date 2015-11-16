@@ -4,10 +4,9 @@
 
 #include "libble.h"
 
-static const char *dev_addr = "84:DD:20:F0:86:AB";
-
 #define VECS_CHAR_MPU_TEMPERATURE 0x0032
 
+char *dev_addr;
 DEVHANDLER devh;
 
 int main(int argc, char **argv)
@@ -16,8 +15,14 @@ int main(int argc, char **argv)
 	int16_t raw_temp;
 	uint8_t data[2];
 
-	printf("connecting to %s\n", dev_addr);
+	if ( argc != 2 ) {
+		printf("\nusage: %s <device addr>\n\n", argv[0]);
+		return -1;
+	}
+	dev_addr = argv[1];
+
 	devh = lble_newdev();
+	printf("connecting to %s\n", dev_addr);
 	lble_connect(devh, dev_addr);
 	if (lble_get_state(devh) != STATE_CONNECTED) {
 		fprintf(stderr, "error: connection failed\n");

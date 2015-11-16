@@ -5,15 +5,13 @@
 
 #include "libble.h"
 
-// Адрес брелка VECS
-static const char *dev_addr = "84:DD:20:F0:86:AB";
-
 // Переменные для расчета частоты получения пакетов
 uint32_t counter = 0;
 double speed = 0;
 double time = 0;
 struct timeval t_old, t_new;
 
+char *dev_addr;
 DEVHANDLER devh;
 
 // Желаемая частота пакетов
@@ -61,9 +59,14 @@ void notify_handler(uint16_t handle, uint8_t len, const uint8_t *data, const voi
 
 int main(int argc, char **argv)
 {
-	printf("connecting to %s\n", dev_addr);
+	if ( argc != 2 ) {
+		printf("\nusage: %s <device addr>\n\n", argv[0]);
+		return -1;
+	}
+	dev_addr = argv[1];
 
 	devh = lble_newdev();
+	printf("connecting to %s\n", dev_addr);
 	lble_connect(devh, dev_addr);
 
 	if (lble_get_state(devh) != STATE_CONNECTED) {

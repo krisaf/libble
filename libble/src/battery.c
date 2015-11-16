@@ -4,15 +4,20 @@
 
 #include "libble.h"
 
-static const char *dev_addr = "84:DD:20:F0:86:AB";
-
 #define VECS_CHAR_BATT_LEVEL 0x0036
 
+char *dev_addr;
 DEVHANDLER devh;
 
 int main(int argc, char **argv)
 {
 	uint8_t bat_level;
+
+	if ( argc != 2 ) {
+		printf("\nusage: %s <device addr>\n\n", argv[0]);
+		return -1;
+	}
+	dev_addr = argv[1];
 
 	devh = lble_newdev();
 	printf("connecting to %s\n", dev_addr);
