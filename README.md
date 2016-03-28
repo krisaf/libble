@@ -53,11 +53,18 @@ Notification handle = 0x0047 value: 00
 Шаг 3. Компиляция и использование библиотеки libble
 
 Библиотека libble использует часть исходных кодов BlueZ - официального стека протоколов
-Bluetooth для Linux. Для сборки библиотеки необходимо установить некоторые пакеты
+Bluetooth для Linux. Нужно клонировать BlueZ из git:
+
+git clone git://git.kernel.org/pub/scm/bluetooth/bluez.git
+
+после чего скопировать файл bluez.mk в домашнюю директорию ~/ и отредактировать в нём путь
+до директории с BlueZ.
+
+Для сборки библиотеки необходимо установить некоторые пакеты
 
 Для Ubuntu:
 ```
-$ sudo apt-get install libglib-2.0-dev
+$ sudo apt-get install libglib-2.0-dev libbluetooth3 libbluetooth-dev
 ```
 
 Далее, перейти в каталог libble, где лежит Makefile и выполнить:
