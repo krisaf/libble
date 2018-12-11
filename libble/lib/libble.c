@@ -212,7 +212,7 @@ uint8_t lble_read(DEVHANDLER devh, uint16_t handle, uint8_t *data)
 	devh_t *dev = devh;
 
 	if (!dev || dev->conn_state != STATE_CONNECTED)
-		return;
+		return 0;
 
 	dev->len = 0;
 	dev->buffer = data;
