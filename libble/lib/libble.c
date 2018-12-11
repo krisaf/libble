@@ -250,13 +250,3 @@ void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, uint8_t *data)
 		g_main_loop_run(dev->event_loop);
 	}
 }
-
-void bswap_128(const void *src, void *dst)
-{
-	const uint8_t *s = (const uint8_t *) src;
-	uint8_t *d = (uint8_t *) dst;
-	int i;
-
-	for (i = 0; i < 16; i++)
-		d[15 - i] = s[i];
-}

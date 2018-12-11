@@ -29,8 +29,6 @@ extern void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, uint8_t *d
 
 extern devstate_t lble_get_state(DEVHANDLER devh);
 
-extern void bswap_128(const void *src, void *dst);
-
 #ifdef __cplusplus
 }
 #endif
