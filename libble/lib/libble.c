@@ -130,7 +130,7 @@ void lble_connect(DEVHANDLER devh, const char *addr)
 	dev->event_loop = g_main_loop_new(NULL, FALSE);
 	dev->conn_state = STATE_CONNECTING;
 
-	dev->iochannel = gatt_connect(NULL, g_strdup(addr), "public", "low", 0, 0, connect_cb, dev, &gerr);
+	dev->iochannel = gatt_connect(g_strdup(addr), connect_cb, dev, &gerr);
 	if (dev->iochannel == NULL) {
 		dev->conn_state = STATE_DISCONNECTED;
 		fprintf(stderr, "LBLE::ERROR %s\n", gerr->message);

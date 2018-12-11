@@ -9,9 +9,8 @@ extern "C" {
 
 #include "btio/btio.h"
 
-GIOChannel *gatt_connect(const char *src, const char *dst,
-			const char *dst_type, const char *sec_level,
-			int psm, int mtu, BtIOConnect connect_cb,
+GIOChannel *gatt_connect(const char *dst,
+			BtIOConnect connect_cb,
 			gpointer cb_info, GError **gerr);
 
 #ifdef __cplusplus
