@@ -37,7 +37,6 @@
 
 #include "lib/sdp.h"
 #include "lib/uuid.h"
-#include "btio/btio.h"
 #include "att.h"
 #include "gatt.h"
 #include "shared/util.h"

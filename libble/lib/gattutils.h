@@ -5,8 +5,6 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-
 #include "btio/btio.h"
 
 GIOChannel *gatt_connect(const char *dst,
