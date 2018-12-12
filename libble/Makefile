@@ -3,7 +3,7 @@ include $(HOME)/bluez.mk
 BLUEZ_SRCS  = lib/bluetooth.c lib/hci.c lib/sdp.c lib/uuid.c
 BLUEZ_SRCS += attrib/att.c attrib/gatt.c attrib/gattrib.c
 BLUEZ_SRCS += btio/btio.c
-BLUEZ_SRCS += src/log.c
+BLUEZ_SRCS += src/log.c src/shared/log.c
 BLUEZ_SRCS += src/shared/att.c src/shared/crypto.c src/shared/queue.c src/shared/timeout-glib.c src/shared/io-glib.c src/shared/util.c
 IMPORT_SRCS = $(addprefix $(BLUEZ_PATH)/, $(BLUEZ_SRCS))
 
