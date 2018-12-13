@@ -13,6 +13,7 @@
 
 #define VECS_CHAR_BEEP_REQUEST      0x003f
 
+// Beep delay in seconds
 uint8_t delay = 0;
 GMainLoop *event_loop;
 
@@ -39,8 +40,6 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *
 						lble_request(devh, VECS_CHAR_MPU_TEMPERATURE);
 						printf("Request battery\n");
 						lble_request(devh, VECS_CHAR_BATT_LEVEL);
-						printf("Enable listening for notifications\n");
-						lble_listen(devh);
 					}
 					break;
 				case DATA_TO_READ:
@@ -56,6 +55,8 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *
 							printf("Asking to beep every %d seconds\n", delay);
 							lble_write(devh, VECS_CHAR_BEEP_REQUEST, 1, &delay);
 						}
+						printf("Enable listening for notifications\n");
+						lble_listen(devh);
 					}
 					break;
 				case ERROR_OCCURED:
@@ -96,7 +97,7 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
-		printf("\nUsage: %s <device addr> [delay between beeps in sec]\n\n", argv[0]);
+		printf("\nUsage: %s <device addr> [delay between beeps in seconds]\n\n", argv[0]);
 		return -1;
 	}
 

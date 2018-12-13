@@ -15,11 +15,12 @@
 #define VECS_MOTION_NOTI_VAL        0x002e
 #define VECS_MOTION_NOTI_CFG        0x002f
 
-// Желаемая частота пакетов, до 200 отсчётов в секунду
-static uint8_t pps = 200;
+// Maximum PPS up to 200
+const uint8_t max_pps = 200;
+uint8_t pps = max_pps;
 
 /*
- * Диапазон шкалы акселерометра
+ * Accel range
  * 0 - +-2g
  * 1 - +-4g
  * 2 - +-8g
@@ -28,7 +29,7 @@ static uint8_t pps = 200;
 static uint8_t accel = 0;
 
 /*
- * Диапазон шкалы гироскопа
+ * Gyro range
  * 0 - +-250 deg/s
  * 1 - +-500 deg/s
  * 2 - +-1000 deg/s
@@ -51,7 +52,6 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *
 	uint8_t bat_level;
 	static uint8_t configured = 0;
 
-// Переменные для расчета частоты получения пакетов
 	static uint32_t counter = 0;
 	static double speed = 0;
 	static struct timeval t_old;
@@ -69,8 +69,6 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *
 						lble_request(devh, VECS_CHAR_MPU_TEMPERATURE);
 						printf("Request battery\n");
 						lble_request(devh, VECS_CHAR_BATT_LEVEL);
-						printf("Enable listening for notifications\n");
-						lble_listen(devh);
 					}
 					break;
 				case DATA_TO_READ:
@@ -89,6 +87,8 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *
 						sleep(1);
 						printf("Enabling notifications on MPU6000 data\n");
 						lble_write(devh, VECS_MOTION_NOTI_CFG, 2, (uint8_t *)"\x01\x00");
+						printf("Enable listening for notifications\n");
+						lble_listen(devh);
 						gettimeofday(&t_old, NULL);
 					}
 					break;
@@ -137,8 +137,14 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
-		printf("\nUsage: %s <device addr>\n\n", argv[0]);
+		printf("\nUsage: %s <device addr> [PPS=200]\n\n", argv[0]);
 		return -1;
+	}
+
+	if (argc >= 3) {
+		pps = atoi(argv[2]);
+		if (pps > max_pps)
+			pps = max_pps;
 	}
 
 	char *dev_addr = argv[1];
