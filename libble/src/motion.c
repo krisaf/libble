@@ -1,83 +1,22 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <signal.h>
 
 #include "libble.h"
 
-// Переменные для расчета частоты получения пакетов
-uint32_t counter = 0;
-double speed = 0;
-double time = 0;
-struct timeval t_old, t_new;
+#include <glib.h>
 
-char *dev_addr;
-DEVHANDLER devh;
+#define VECS_CHAR_MPU_TEMPERATURE   0x0032
+#define VECS_CHAR_BATT_LEVEL        0x0036
 
-// Желаемая частота пакетов
-uint8_t pps = 200;
+#define VECS_MOTION_RATE_CFG        0x002b
+#define VECS_MOTION_ACCEL_CFG       0x0025
+#define VECS_MOTION_GYRO_CFG        0x0028
+#define VECS_MOTION_NOTI_VAL        0x002e
+#define VECS_MOTION_NOTI_CFG        0x002f
 
-void sigint(int a)
-{
-	lble_disconnect(devh);
-}
-
-// Обработчик приходящих уведомлений с данным датчиков
-void notify_handler(uint16_t handle, uint8_t len, const uint8_t *data, const void *cb_info)
-{
-	int i;
-	int16_t mpu_data[7];
-
-	counter++;
-
-	signal(SIGINT, sigint);
-	gettimeofday(&t_new, NULL);
-	time = t_new.tv_sec - t_old.tv_sec;
-	time += (t_new.tv_usec - t_old.tv_usec) / 1000000.0;
-	if (time >= 1.0) {
-		speed = counter / time;
-		counter = 0;
-		t_old = t_new;
-	}
-
-	for (i = 0; i < 7; i++) {
-		mpu_data[i] = data[i << 1] << 8;
-		mpu_data[i] |= data[(i << 1) + 1];
-	}
-
-	printf("[0x%04x] accelX: %6d accelY: %6d accelZ: %6d idx: %6d gyroX: %6d gyroY: %6d gyroZ: %6d PPS: %.0f Hz\n",
-														handle,
-														mpu_data[0],
-														mpu_data[1],
-														mpu_data[2],
-														(uint16_t)mpu_data[3],
-														mpu_data[4],
-														mpu_data[5],
-														mpu_data[6], 
-														speed);
-}
-
-int main(int argc, char **argv)
-{
-	if ( argc != 2 ) {
-		printf("\nusage: %s <device addr>\n\n", argv[0]);
-		return -1;
-	}
-	dev_addr = argv[1];
-
-	devh = lble_newdev();
-	printf("connecting to %s\n", dev_addr);
-	lble_connect(devh, dev_addr);
-
-	if (lble_get_state(devh) != STATE_CONNECTED) {
-		fprintf(stderr, "error: connection failed\n");
-		return -1;
-	}
-	printf("connection successful\n");
-
-// Включение сенсоров (вывод из спящего режима) и задание частоты опроса
-	printf("wake up MPU6000 ans setting %d Hz data rate\n", pps);
-	lble_write(devh, 0x002b, 1, &pps);
+// Желаемая частота пакетов, до 200 отсчётов в секунду
+static uint8_t pps = 200;
 
 /*
  * Диапазон шкалы акселерометра
@@ -86,8 +25,7 @@ int main(int argc, char **argv)
  * 2 - +-8g
  * 3 - +-16g
  */
-	printf("setting accel range...\n");
-	lble_write(devh, 0x0025, 1, (uint8_t *)"\x00");
+static uint8_t accel = 0;
 
 /*
  * Диапазон шкалы гироскопа
@@ -96,25 +34,126 @@ int main(int argc, char **argv)
  * 2 - +-1000 deg/s
  * 3 - +-2000 deg/s
  */
-	printf("setting gyro range...\n");
-	lble_write(devh, 0x0028, 1, (uint8_t *)"\x00");
+static uint8_t gyro = 0;
 
-// ожидание обновления параметров соединения, запрашиваемых брелком (1 секунда)
-// ОБЯЗАТЕЛЬНО, если требуется получать данные на большой скорости 
-	printf("waiting for connection update...\n");
-	sleep(1);
+GMainLoop *event_loop;
 
-// Включение уведомлений с данными датчиков
-	printf("enabling notifications on mpu6000 data...\n");
-	lble_write(devh, 0x002f, 2, (uint8_t *)"\x01\x00");
-
-// Регистрируем свой обработчик приема уведомлений и запускаем цикл прослушки	
-	printf("listening for notifications\n");
-	lble_listen(devh, notify_handler, NULL);
-
-	lble_freedev(devh);
-
-	return 0;
+void sigint(int a)
+{
+	printf("\n");
+	g_main_loop_quit(event_loop);
 }
 
+void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *data, DEVHANDLER devh)
+{
+	float temp;	
+	int16_t raw_temp;
+	uint8_t bat_level;
+	static uint8_t configured = 0;
 
+// Переменные для расчета частоты получения пакетов
+	static uint32_t counter = 0;
+	static double speed = 0;
+	static struct timeval t_old;
+	struct timeval t_new;
+	double dtime = 0;
+	int16_t mpu_data[7];
+
+	switch ((uint8_t)event) {
+		case EVENT_INTERNAL:
+			switch (handle) {
+				case STATE_CHANGED:
+					if (data[0] == STATE_CONNECTED) {
+						printf("Connection successful\n");
+						printf("Request temperature\n");
+						lble_request(devh, VECS_CHAR_MPU_TEMPERATURE);
+						printf("Request battery\n");
+						lble_request(devh, VECS_CHAR_BATT_LEVEL);
+						printf("Enable listening for notifications\n");
+						lble_listen(devh);
+					}
+					break;
+				case DATA_TO_READ:
+					printf("Data to read event\n");
+					break;
+				case DATA_TO_WRITE:
+					printf("Data to write event\n");
+					if (!configured) {
+						configured = 1;
+						printf("Set wake up MPU6000 and setting %dHz data rate\n", pps);
+						lble_write(devh, VECS_MOTION_RATE_CFG, 1, &pps);
+						printf("Setting accel range\n");
+						lble_write(devh, VECS_MOTION_ACCEL_CFG, 1, &accel);
+						printf("Setting gyro range\n");
+						lble_write(devh, VECS_MOTION_GYRO_CFG, 1, &gyro);
+						sleep(1);
+						printf("Enabling notifications on MPU6000 data\n");
+						lble_write(devh, VECS_MOTION_NOTI_CFG, 2, (uint8_t *)"\x01\x00");
+						gettimeofday(&t_old, NULL);
+					}
+					break;
+				case ERROR_OCCURED:
+					printf("An error occured\n");
+					g_main_loop_quit(event_loop);
+					break;
+			}
+			break;
+		case EVENT_DEVICE:
+			switch (handle) {
+				case VECS_CHAR_MPU_TEMPERATURE:
+					raw_temp = (data[0] << 8) | data[1];
+					temp = raw_temp / 340.0 + 35.0;
+					printf(" * Temperature: %.1f *C\n", temp);
+					break;
+				case VECS_CHAR_BATT_LEVEL:
+					bat_level = data[0];
+					printf(" * Battery: %d%%\n", bat_level);
+					break;
+				case VECS_MOTION_NOTI_VAL:
+					counter++;
+					gettimeofday(&t_new, NULL);
+					dtime = t_new.tv_sec - t_old.tv_sec;
+					dtime += (t_new.tv_usec - t_old.tv_usec) / 1000000.0;
+					if (dtime >= 1.0) {
+						speed = counter / dtime + 0.5;
+						counter = 0;
+						t_old = t_new;
+					}
+					for (int i = 0; i < 7; i++) {
+						mpu_data[i] = data[i << 1] << 8;
+						mpu_data[i] |= data[(i << 1) + 1];
+					}
+					printf(" = %6d  |  Accel: %6d, %6d, %6d  |  Gyro: %6d, %6d, %6d  |  PPS: %.0fHz\n",
+						(uint16_t)mpu_data[3],
+						mpu_data[0], mpu_data[1], mpu_data[2],
+						mpu_data[4], mpu_data[5], mpu_data[6], 
+						speed);
+					break;
+			}
+			break;
+	}
+}
+
+int main(int argc, char **argv)
+{
+	if (argc < 2) {
+		printf("\nUsage: %s <device addr>\n\n", argv[0]);
+		return -1;
+	}
+
+	char *dev_addr = argv[1];
+	DEVHANDLER devh = lble_newdev(notify_handler);
+
+	printf("Connecting to %s\n", dev_addr);
+	lble_connect(devh, dev_addr);
+
+	signal(SIGINT, sigint);
+	event_loop = g_main_loop_new(NULL, FALSE);
+	g_main_loop_run(event_loop);
+	g_main_loop_unref(event_loop);
+
+	printf("Disconnect\n");
+	lble_disconnect(devh);
+	lble_freedev(devh);
+	return 0;
+}

@@ -15,29 +15,21 @@ CFLAGS =
 CPPFLAGS = -DVERSION=\"libble-test\"
 CPPFLAGS += -I$(BLUEZ_PATH)/attrib -I$(BLUEZ_PATH) -I$(BLUEZ_PATH)/lib -I$(BLUEZ_PATH)/src -I$(BLUEZ_PATH)/gdbus -I$(BLUEZ_PATH)/btio
 
-CPPFLAGS += `pkg-config glib-2.0 --cflags`
+PROGCPPFLAGS += `pkg-config glib-2.0 --cflags`
+
+CPPFLAGS += $(PROGCPPFLAGS)
 LDLIBS += `pkg-config glib-2.0 --libs`
 
-all: libble.so motion battery button beep temp
+all: libble.so motion info
 
 libble.so: $(LIB_SRCS) $(IMPORT_SRCS)
 	$(CC) -shared -L. $(CFLAGS) $(CPPFLAGS) -fPIC -o $@ $(LIB_SRCS) $(IMPORT_SRCS) $(LDLIBS)
 
 motion: src/motion.c
-	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ $< -lble
+	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ $< -lble $(PROGCPPFLAGS) $(LDLIBS)
 
-battery: src/battery.c
-	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ $< -lble
-
-button: src/button.c
-	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ $< -lble
-
-beep: src/beep.c
-	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ $< -lble
-
-temp: src/temp.c
-	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ $< -lble
+info: src/info.c
+	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ $< -lble $(PROGCPPFLAGS) $(LDLIBS)
 
 clean:
-	rm -f libble.so motion battery button beep temp
-
+	rm -f libble.so motion info

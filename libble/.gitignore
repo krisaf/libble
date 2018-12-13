@@ -1,6 +1,3 @@
 *.so
-battery
-beep
-button
 motion
-temp
+info

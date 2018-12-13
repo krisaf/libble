@@ -13,18 +13,27 @@ typedef enum {
 	STATE_CONNECTED
 } devstate_t;
 
+typedef enum {
+	EVENT_INTERNAL = 0,
+	EVENT_DEVICE
+} event_t;
+
+typedef enum {
+	STATE_CHANGED = 0,
+	ERROR_OCCURED,
+	DATA_TO_READ,
+	DATA_TO_WRITE
+} handle_t;
+
 typedef void * DEVHANDLER;
+typedef void (*lble_event_handler)(event_t event, uint16_t handle, uint8_t len, const uint8_t *data, DEVHANDLER dev);
 
-typedef void (*lble_event_handler)(uint16_t handle, uint8_t len, const uint8_t *data, const void *cb_info);
-
-extern DEVHANDLER lble_newdev();
+extern DEVHANDLER lble_newdev(lble_event_handler handler);
 extern void lble_freedev(DEVHANDLER devh);
 extern void lble_connect(DEVHANDLER devh, const char *addr);
 extern void lble_disconnect(DEVHANDLER devh);
-
-extern void lble_listen(DEVHANDLER devh, lble_event_handler handler, void *cb_info);
-
-extern uint8_t lble_read(DEVHANDLER devh, uint16_t handle, uint8_t *data);
+extern void lble_listen(DEVHANDLER devh);
+extern void lble_request(DEVHANDLER devh, uint16_t handle);
 extern void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, uint8_t *data);
 
 extern devstate_t lble_get_state(DEVHANDLER devh);
