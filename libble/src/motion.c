@@ -101,7 +101,7 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *
 		case EVENT_DEVICE:
 			switch (handle) {
 				case VECS_CHAR_MPU_TEMPERATURE:
-					raw_temp = (data[0] << 8) | data[1];
+					raw_temp = ((uint16_t)data[0] << 8) | data[1];
 					temp = raw_temp / 340.0 + 35.0;
 					printf(" * Temperature: %.1f *C\n", temp);
 					break;
