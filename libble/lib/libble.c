@@ -46,6 +46,7 @@ typedef struct {
 	GIOChannel *iochannel;
 	GAttrib *attrib;
 	lble_event_handler evh;
+	void *user_data;
 } devh_t;
 
 typedef struct {
@@ -121,16 +122,13 @@ static gboolean channel_watcher(GIOChannel *ch, GIOCondition cond, gpointer user
 
 /* exported functions */
 
-DEVHANDLER lble_newdev(lble_event_handler handler)
+DEVHANDLER lble_newdev()
 {
-	devh_t *dev;
-
-	dev = calloc(1, sizeof(devh_t));
+	devh_t *dev = calloc(1, sizeof(devh_t));
 	if (!dev) {
 		return NULL;
 	}
 	dev->conn_state = STATE_DISCONNECTED;
-	dev->evh = handler;
 	return dev;
 }
 
@@ -198,8 +196,38 @@ void lble_disconnect(DEVHANDLER devh)
 	dev->iochannel = NULL;
 }
 
+void lble_set_event_handler(DEVHANDLER devh, lble_event_handler handler)
+{
+	devh_t *dev = devh;
+
+	if (!dev)
+		return;
+
+	dev->evh = handler;
+}
+
+void lble_set_user_data(DEVHANDLER devh, void *user_data)
+{
+	devh_t *dev = devh;
+
+	if (!dev)
+		return;
+
+	dev->user_data = user_data;
+}
+
+void *lble_user_data(DEVHANDLER devh)
+{
+	devh_t *dev = devh;
+
+	if (!dev)
+		return NULL;
+
+	return dev->user_data;
+}
+
 /* get connection state */
-devstate_t lble_get_state(DEVHANDLER devh)
+devstate_t lble_state(DEVHANDLER devh)
 {
 	devh_t *dev = devh;
 

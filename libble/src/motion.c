@@ -148,7 +148,8 @@ int main(int argc, char **argv)
 	}
 
 	char *dev_addr = argv[1];
-	DEVHANDLER devh = lble_newdev(notify_handler);
+	DEVHANDLER devh = lble_newdev();
+	lble_set_event_handler(devh, notify_handler);
 
 	printf("Connecting to %s\n", dev_addr);
 	lble_connect(devh, dev_addr);
