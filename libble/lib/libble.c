@@ -280,7 +280,7 @@ static void char_write_cb(guint8 status, const guint8 *pdu, guint16 plen, gpoint
 }
 
 /* write characteristic by handle */
-void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, uint8_t *data)
+void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, void *data)
 {
 	devh_t *dev = devh;
 

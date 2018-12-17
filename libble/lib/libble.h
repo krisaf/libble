@@ -26,7 +26,7 @@ typedef enum {
 } handle_t;
 
 typedef void * DEVHANDLER;
-typedef void (*lble_event_handler)(event_t event, uint16_t handle, uint8_t len, const uint8_t *data, DEVHANDLER dev);
+typedef void (*lble_event_handler)(event_t event, uint16_t handle, uint8_t len, const void *data, DEVHANDLER dev);
 
 extern DEVHANDLER lble_newdev();
 extern void lble_freedev(DEVHANDLER devh);
@@ -34,7 +34,7 @@ extern void lble_connect(DEVHANDLER devh, const char *addr);
 extern void lble_disconnect(DEVHANDLER devh);
 extern void lble_listen(DEVHANDLER devh);
 extern void lble_request(DEVHANDLER devh, uint16_t handle);
-extern void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, uint8_t *data);
+extern void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, void *data);
 
 extern void lble_set_event_handler(DEVHANDLER devh, lble_event_handler handler);
 extern void lble_set_user_data(DEVHANDLER devh, void *user_data);

@@ -23,7 +23,7 @@ void sigint(int a)
 	g_main_loop_quit(event_loop);
 }
 
-void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *data, DEVHANDLER devh)
+void notify_handler(event_t event, uint16_t handle, uint8_t len, const void *data, DEVHANDLER devh)
 {
 	float temp;	
 	int16_t raw_temp;
@@ -34,7 +34,7 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *
 		case EVENT_INTERNAL:
 			switch (handle) {
 				case STATE_CHANGED:
-					if (data[0] == STATE_CONNECTED) {
+					if (((uint8_t *)data)[0] == STATE_CONNECTED) {
 						printf("Connection successful\n");
 						printf("Request temperature\n");
 						lble_request(devh, VECS_CHAR_MPU_TEMPERATURE);
@@ -68,16 +68,16 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const uint8_t *
 		case EVENT_DEVICE:
 			switch (handle) {
 				case VECS_CHAR_MPU_TEMPERATURE:
-					raw_temp = ((uint16_t)data[0] << 8) | data[1];
+					raw_temp = ((uint16_t)((uint8_t *)data)[0] << 8) | ((uint8_t *)data)[1];
 					temp = raw_temp / 340.0 + 35.0;
 					printf(" * Temperature: %.1f *C\n", temp);
 					break;
 				case VECS_CHAR_BATT_LEVEL:
-					bat_level = data[0];
+					bat_level = ((uint8_t *)data)[0];
 					printf(" * Battery: %d%%\n", bat_level);
 					break;
 				case VECS_BUTTON_NOTI_VAL:
-					switch (*data) {
+					switch (((uint8_t *)data)[0]) {
 						case 1:
 							printf(" +   Single click\n");
 							break;
