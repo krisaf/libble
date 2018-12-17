@@ -244,9 +244,8 @@ static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen, gpointe
 	} else {
 		ssize_t len = plen + 2;
 		uint8_t *data = calloc(1, len);
-		dec_read_resp(pdu, plen, &data[3], len - 3);
 
-		if (len >= 0) {
+		if (dec_read_resp(pdu, plen, &data[3], len - 3) > 0) {
 			data[0] = ATT_OP_HANDLE_NOTIFY;
 			put_le16(request->handle, &data[1]);
 			events_handler(data, len, dev);
