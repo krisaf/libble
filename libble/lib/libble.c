@@ -23,23 +23,22 @@
  */
 
 #include <glib.h>
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <stdbool.h>
-
-#include "gattrib.h"
+#include <unistd.h>
 
 #include "libble.h"
-#include "gattutils.h"
 
+#include "btio/btio.h"
 #include "lib/sdp.h"
 #include "lib/uuid.h"
+#include "shared/util.h"
+
+#include "gattrib.h"
 #include "att.h"
 #include "gatt.h"
-#include "shared/util.h"
 
 typedef struct {
 	devstate_t conn_state;
@@ -53,6 +52,34 @@ typedef struct {
 	devh_t *dev;
 	uint16_t handle;
 } request_t;
+
+GIOChannel *gatt_connect(const char *dst,
+				BtIOConnect connect_cb,
+				gpointer cb_info, GError **gerr)
+{
+	GIOChannel *chan;
+	bdaddr_t sba, dba;
+	GError *tmp_err = NULL;
+
+	str2ba(dst, &dba);
+	bacpy(&sba, BDADDR_ANY);
+
+	chan = bt_io_connect(connect_cb, cb_info, NULL, &tmp_err,
+			BT_IO_OPT_SOURCE_BDADDR, &sba,
+			BT_IO_OPT_SOURCE_TYPE, BDADDR_LE_PUBLIC,
+			BT_IO_OPT_DEST_BDADDR, &dba,
+			BT_IO_OPT_DEST_TYPE, BDADDR_LE_PUBLIC,
+			BT_IO_OPT_CID, ATT_CID,
+			BT_IO_OPT_SEC_LEVEL, BT_IO_SEC_LOW,
+			BT_IO_OPT_INVALID);
+
+	if (tmp_err) {
+		g_propagate_error(gerr, tmp_err);
+		return NULL;
+	}
+
+	return chan;
+}
 
 void emit(devh_t *dev, uint16_t handle, uint8_t len, const uint8_t *data)
 {

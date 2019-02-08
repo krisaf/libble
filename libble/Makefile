@@ -7,7 +7,7 @@ BLUEZ_SRCS += src/log.c src/shared/log.c
 BLUEZ_SRCS += src/shared/att.c src/shared/crypto.c src/shared/queue.c src/shared/timeout-glib.c src/shared/io-glib.c src/shared/util.c
 IMPORT_SRCS = $(addprefix $(BLUEZ_PATH)/, $(BLUEZ_SRCS))
 
-LIB_SRCS = lib/gattutils.c lib/libble.c
+LIB_SRCS = lib/libble.c
 
 CC = gcc
 CFLAGS =
