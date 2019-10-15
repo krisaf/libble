@@ -83,13 +83,16 @@ GIOChannel *gatt_connect(const char *dst,
 
 void emit(devh_t *dev, uint16_t handle, uint8_t len, const uint8_t *data)
 {
-	if (dev->evh != NULL)
+	if (dev && dev->evh)
 		dev->evh(EVENT_INTERNAL, handle, len, data, dev);
 }
 
 static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 {
 	devh_t *dev = user_data;
+
+	if (!dev || dev->conn_state != STATE_DISCONNECTED)
+		return;
 
 	if (pdu[0] == ATT_OP_HANDLE_NOTIFY && dev->evh != NULL) {
 		dev->evh(EVENT_DEVICE, get_le16(&pdu[1]), len - 3, &pdu[3], dev);
@@ -207,7 +210,7 @@ void lble_listen(DEVHANDLER devh)
 void lble_disconnect(DEVHANDLER devh)
 {
 	devh_t *dev = devh;
-//	GError *gerr = NULL;
+	GError *gerr = NULL;
 
 	if (!dev || dev->conn_state == STATE_DISCONNECTED)
 		return;
@@ -215,32 +218,31 @@ void lble_disconnect(DEVHANDLER devh)
 	dev->conn_state = STATE_DISCONNECTED;
 	emit(dev, STATE_CHANGED, 1, (void *)&dev->conn_state);
 
-	g_attrib_unref(dev->attrib);
-	dev->attrib = NULL;
-
-//	g_io_channel_shutdown(dev->iochannel, FALSE, &gerr);
+	if (g_io_channel_shutdown(dev->iochannel, FALSE, &gerr) == G_IO_STATUS_ERROR) {
+		g_error_free(gerr);
+	}
 	g_io_channel_unref(dev->iochannel);
 	dev->iochannel = NULL;
+	g_attrib_unref(dev->attrib);
+	dev->attrib = NULL;
 }
 
 void lble_set_event_handler(DEVHANDLER devh, lble_event_handler handler)
 {
 	devh_t *dev = devh;
 
-	if (!dev)
-		return;
-
-	dev->evh = handler;
+	if (dev) {
+		dev->evh = handler;
+	}
 }
 
 void lble_set_user_data(DEVHANDLER devh, void *user_data)
 {
 	devh_t *dev = devh;
 
-	if (!dev)
-		return;
-
-	dev->user_data = user_data;
+	if (dev) {
+		dev->user_data = user_data;
+	}
 }
 
 void *lble_user_data(DEVHANDLER devh)
@@ -257,6 +259,9 @@ void *lble_user_data(DEVHANDLER devh)
 devstate_t lble_state(DEVHANDLER devh)
 {
 	devh_t *dev = devh;
+
+	if (!dev)
+		return STATE_DISCONNECTED;
 
 	return dev->conn_state;
 }
