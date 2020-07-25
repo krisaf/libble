@@ -10,7 +10,7 @@ extern "C" {
 typedef enum {
 	STATE_DISCONNECTED = 0,
 	STATE_CONNECTING,
-	STATE_CONNECTED
+	STATE_CONNECTED,
 } devstate_t;
 
 typedef enum {
@@ -25,7 +25,7 @@ typedef enum {
 	DATA_TO_WRITE
 } handle_t;
 
-typedef void * DEVHANDLER;
+typedef void *DEVHANDLER;
 typedef void (*lble_event_handler)(event_t event, uint16_t handle, uint8_t len, const void *data, DEVHANDLER dev);
 
 extern DEVHANDLER lble_newdev();

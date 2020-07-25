@@ -21,6 +21,8 @@ void sigint(int a)
 {
 	printf("\n");
 	g_main_loop_quit(event_loop);
+	g_main_loop_unref(event_loop);
+	event_loop = NULL;
 }
 
 void notify_handler(event_t event, uint16_t handle, uint8_t len, const void *data, DEVHANDLER devh)
@@ -34,12 +36,24 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const void *dat
 		case EVENT_INTERNAL:
 			switch (handle) {
 				case STATE_CHANGED:
-					if (((uint8_t *)data)[0] == STATE_CONNECTED) {
-						printf("Connection successful\n");
-						printf("Request temperature\n");
-						lble_request(devh, VECS_CHAR_MPU_TEMPERATURE);
-						printf("Request battery\n");
-						lble_request(devh, VECS_CHAR_BATT_LEVEL);
+					switch (((uint8_t *)data)[0]) {
+						case STATE_CONNECTED:
+							printf("Connection successful\n");
+							printf("Request temperature\n");
+							lble_request(devh, VECS_CHAR_MPU_TEMPERATURE);
+							printf("Request battery\n");
+							lble_request(devh, VECS_CHAR_BATT_LEVEL);
+							break;
+						case STATE_DISCONNECTED:
+							printf("Disconnected\n");
+							if (event_loop) {
+								g_main_loop_quit(event_loop);
+								g_main_loop_unref(event_loop);
+								event_loop = NULL;
+							}
+							break;
+						default:
+							break;
 					}
 					break;
 				case DATA_TO_READ:
@@ -60,8 +74,12 @@ void notify_handler(event_t event, uint16_t handle, uint8_t len, const void *dat
 					}
 					break;
 				case ERROR_OCCURED:
-					printf("An error occured\n");
-					g_main_loop_quit(event_loop);
+					printf("Error: %s\n", (const char *)data);
+					if (event_loop) {
+						g_main_loop_quit(event_loop);
+						g_main_loop_unref(event_loop);
+						event_loop = NULL;
+					}
 					break;
 			}
 			break;
@@ -109,13 +127,18 @@ int main(int argc, char **argv)
 	DEVHANDLER devh = lble_newdev();
 	lble_set_event_handler(devh, notify_handler);
 
+	signal(SIGINT, sigint);
+	event_loop = g_main_loop_new(NULL, FALSE);
+
 	printf("Connecting to %s\n", dev_addr);
 	lble_connect(devh, dev_addr);
 
-	signal(SIGINT, sigint);
-	event_loop = g_main_loop_new(NULL, FALSE);
-	g_main_loop_run(event_loop);
-	g_main_loop_unref(event_loop);
+	if (event_loop) {
+		g_main_loop_run(event_loop);
+		if (event_loop) {
+			g_main_loop_unref(event_loop);
+		}
+	}
 
 	printf("Disconnect\n");
 	lble_disconnect(devh);
