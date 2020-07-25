@@ -40,10 +40,10 @@ $(TARGET): $(LIB_SRCS) $(IMPORT_SRCS)
 	$(SYMLINK) $@ $(TARGET1)
 	$(SYMLINK) $@ $(TARGET2)
 
-motion: $(TARGET)
+motion: src/motion.c $(TARGET)
 	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ src/motion.c -lble $(PROGCPPFLAGS) $(LDLIBS)
 
-info: $(TARGET)
+info: src/info.c $(TARGET)
 	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ src/info.c -lble $(PROGCPPFLAGS) $(LDLIBS)
 
 clean:
