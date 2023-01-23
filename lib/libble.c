@@ -186,6 +186,37 @@ static void char_write_cb(guint8 status, const guint8 *pdu, guint16 plen, gpoint
 	}
 }
 
+static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
+{
+	devh_t *dev = user_data;
+	if (status) {
+		emit(dev, ERROR_OCCURED, 0, att_ecode2str(status));
+	} else {
+		for (GSList *l = descriptors; l; l = l->next) {
+			struct gatt_desc *desc = l->data;
+			char_info_t info = {desc->uuid16, 0, 0, desc->handle};
+			dev->evh(EVENT_UUID, desc->handle, sizeof(info), &info, dev);
+//			dev->evh(EVENT_UUID, desc->handle, sizeof(desc->uuid16), &desc->uuid16, dev);
+		}
+		dev->evh(EVENT_UUID, 0, 0, NULL, dev);
+	}
+}
+
+static void char_discovered_cb(uint8_t status, GSList *characteristics, void *user_data)
+{
+	devh_t *dev = user_data;
+	if (status) {
+		emit(dev, ERROR_OCCURED, 0, att_ecode2str(status));
+	} else {
+		for (GSList *l = characteristics; l; l = l->next) {
+			struct gatt_char *chars = l->data;
+			char_info_t info = {0, chars->properties, chars->handle, chars->value_handle};
+			dev->evh(EVENT_UUID, chars->handle, sizeof(info), &info, dev);
+		}
+		dev->evh(EVENT_UUID, 0, 0, NULL, dev);
+	}
+}
+
 /* exported functions */
 
 /* create new handler */
@@ -308,7 +339,7 @@ void lble_request(DEVHANDLER devh, uint16_t handle)
 }
 
 /* write characteristic by handle */
-void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, void *data)
+void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, const void *data)
 {
 	devh_t *dev = devh;
 	if (!dev || dev->conn_state != STATE_CONNECTED) {
@@ -318,3 +349,24 @@ void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, void *data)
 		gatt_write_char(dev->attrib, handle, data, len, char_write_cb, dev);
 	}
 }
+
+/* discover handles */
+void lble_discover_hand(DEVHANDLER devh)
+{
+	devh_t *dev = devh;
+	if (!dev || dev->conn_state != STATE_CONNECTED) {
+		return;
+	}
+	gatt_discover_desc(dev->attrib, 0x0001, 0xffff, NULL, char_desc_cb, dev);
+}
+
+/* discover characteristics */
+void lble_discover_char(DEVHANDLER devh)
+{
+	devh_t *dev = devh;
+	if (!dev || dev->conn_state != STATE_CONNECTED) {
+		return;
+	}
+	gatt_discover_char(dev->attrib, 0x0001, 0xffff, NULL, char_discovered_cb, dev);
+}
+

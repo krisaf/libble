@@ -40,11 +40,11 @@ $(TARGET): $(LIB_SRCS) $(IMPORT_SRCS)
 	$(SYMLINK) $@ $(TARGET1)
 	$(SYMLINK) $@ $(TARGET2)
 
-motion: src/motion.c $(TARGET)
-	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ src/motion.c -lble $(PROGCPPFLAGS) $(LDLIBS)
+motion: src/motion.c src/vecs.c $(TARGET)
+	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ src/motion.c src/vecs.c -lble $(PROGCPPFLAGS) $(LDLIBS)
 
-info: src/info.c $(TARGET)
-	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ src/info.c -lble $(PROGCPPFLAGS) $(LDLIBS)
+info: src/info.c src/vecs.c $(TARGET)
+	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ src/info.c src/vecs.c -lble $(PROGCPPFLAGS) $(LDLIBS)
 
 clean:
 	rm -f libble.so libble.so.* motion info

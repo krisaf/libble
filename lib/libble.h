@@ -15,7 +15,8 @@ typedef enum {
 
 typedef enum {
 	EVENT_INTERNAL = 0,
-	EVENT_DEVICE
+	EVENT_DEVICE,
+	EVENT_UUID
 } event_t;
 
 typedef enum {
@@ -24,6 +25,13 @@ typedef enum {
 	DATA_TO_READ,
 	DATA_TO_WRITE
 } handle_t;
+
+typedef struct {
+	uint16_t uuid;
+	uint8_t properties;
+	uint16_t handle;
+	uint16_t value_handle;
+} char_info_t;
 
 typedef void *DEVHANDLER;
 typedef void (*lble_event_handler)(event_t event, uint16_t handle, uint8_t len, const void *data, DEVHANDLER dev);
@@ -34,7 +42,9 @@ extern void lble_connect(DEVHANDLER devh, const char *addr);
 extern void lble_disconnect(DEVHANDLER devh);
 extern void lble_listen(DEVHANDLER devh);
 extern void lble_request(DEVHANDLER devh, uint16_t handle);
-extern void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, void *data);
+extern void lble_write(DEVHANDLER devh, uint16_t handle, uint8_t len, const void *data);
+extern void lble_discover_hand(DEVHANDLER devh);
+extern void lble_discover_char(DEVHANDLER devh);
 
 extern void lble_set_event_handler(DEVHANDLER devh, lble_event_handler handler);
 extern void lble_set_user_data(DEVHANDLER devh, void *user_data);
