@@ -10,9 +10,9 @@ extern "C" {
 #include <stdio.h>
 #include <unistd.h>
 
-#define VECS_UUID_CHARGER_ADC    0xffd1
-#define VECS_UUID_CHARGER_OFF    0xffd2
-#define VECS_UUID_CHARGER_LOW    0xffd3
+#define VECS_UUID_CHARGER_ADC   0xffd1
+#define VECS_UUID_CHARGER_OFF   0xffd2
+#define VECS_UUID_CHARGER_LOW   0xffd3
 
 #define VECS_UUID_KEY_PRESS     0xffe1
 #define VECS_UUID_KEY_BEEP      0xffe2

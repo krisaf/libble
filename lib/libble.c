@@ -32,13 +32,13 @@
 #include "libble.h"
 
 #include "btio/btio.h"
-#include "lib/sdp.h"
+#include "sdp.h"
 #include "lib/uuid.h"
-#include "shared/util.h"
+#include "src/shared/util.h"
 
-#include "gattrib.h"
-#include "att.h"
-#include "gatt.h"
+#include "attrib/gattrib.h"
+#include "attrib/att.h"
+#include "attrib/gatt.h"
 
 typedef struct {
 	devstate_t conn_state;
@@ -186,6 +186,7 @@ static void char_write_cb(guint8 status, const guint8 *pdu, guint16 plen, gpoint
 	}
 }
 
+/* discover handles */
 static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
 {
 	devh_t *dev = user_data;
@@ -196,12 +197,12 @@ static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
 			struct gatt_desc *desc = l->data;
 			char_info_t info = {desc->uuid16, 0, 0, desc->handle};
 			dev->evh(EVENT_UUID, desc->handle, sizeof(info), &info, dev);
-//			dev->evh(EVENT_UUID, desc->handle, sizeof(desc->uuid16), &desc->uuid16, dev);
 		}
 		dev->evh(EVENT_UUID, 0, 0, NULL, dev);
 	}
 }
 
+/* discover characteristics */
 static void char_discovered_cb(uint8_t status, GSList *characteristics, void *user_data)
 {
 	devh_t *dev = user_data;
@@ -245,6 +246,7 @@ void lble_connect(DEVHANDLER devh, const char *addr)
 		return;
 	}
 	dev->conn_state = STATE_CONNECTING;
+	emit(dev, STATE_CHANGED, 1, (void *)&dev->conn_state);
 	GError *gerr = NULL;
 	dev->iochannel = gatt_connect(g_strdup(addr), dev, &gerr);
 	if (!dev->iochannel) {
