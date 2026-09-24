@@ -63,22 +63,34 @@ void emit(devh_t *dev, uint16_t handle, uint8_t len, const uint8_t *data)
 static gboolean channel_watcher(GIOChannel *ch, GIOCondition cond, gpointer user_data)
 {
 	devh_t *dev = user_data;
-	switch (cond) {
-		case G_IO_HUP:
-		case G_IO_ERR:
-		case G_IO_NVAL:
-			lble_disconnect(user_data);
-			break;
-		case G_IO_IN:
-		case G_IO_PRI:
-			emit(dev, DATA_TO_READ, sizeof(user_data), user_data);
-			break;
-		case G_IO_OUT:
-			emit(dev, DATA_TO_WRITE, sizeof(user_data), user_data);
-			break;
-		default:
-			break;
-	}
+//	switch (cond) {
+//		case G_IO_HUP:
+//		case G_IO_ERR:
+//		case G_IO_NVAL:
+//			lble_disconnect(user_data);
+//			break;
+//		case G_IO_IN:
+//		case G_IO_PRI:
+//			emit(dev, DATA_TO_READ, sizeof(user_data), user_data);
+//			break;
+//        case G_IO_OUT:
+//			emit(dev, DATA_TO_WRITE, sizeof(user_data), user_data);
+//			break;
+//        default:
+//			break;
+//	}
+    if (cond & (G_IO_HUP | G_IO_ERR | G_IO_NVAL)) {
+        lble_disconnect(user_data);
+        return FALSE;
+    }
+
+    if (cond & (G_IO_IN | G_IO_PRI)) {
+        emit(dev, DATA_TO_READ, sizeof(user_data), user_data);
+    }
+
+    if (cond & G_IO_OUT) {
+        emit(dev, DATA_TO_WRITE, sizeof(user_data), user_data);
+    }
 	return FALSE;
 }
 
@@ -139,7 +151,7 @@ GIOChannel *gatt_connect(const char *dst, gpointer cb_info, GError **gerr)
 			BT_IO_OPT_SOURCE_BDADDR, &sba,
 			BT_IO_OPT_SOURCE_TYPE, BDADDR_LE_PUBLIC,
 			BT_IO_OPT_DEST_BDADDR, &dba,
-			BT_IO_OPT_DEST_TYPE, BDADDR_LE_PUBLIC,
+			BT_IO_OPT_DEST_TYPE, BDADDR_LE_RANDOM,
 			BT_IO_OPT_CID, ATT_CID,
 			BT_IO_OPT_SEC_LEVEL, BT_IO_SEC_LOW,
 			BT_IO_OPT_INVALID);
@@ -157,6 +169,42 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 		dev->evh(EVENT_DEVICE, get_le16(&pdu[1]), len - 3, &pdu[3], dev);
 	}
 }
+
+static void mtu_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+    devh_t *dev = user_data;
+    uint16_t client_mtu;
+    uint16_t final_mtu;
+    uint8_t *buf;
+    size_t buf_size;
+    guint16 rsp_len;
+
+    if (len < 3 || pdu[0] != ATT_OP_MTU_REQ) {
+        return;
+    }
+
+    client_mtu = (pdu[2] << 8) | pdu[1];
+
+    final_mtu = (client_mtu < ATT_MAX_VALUE_LEN) ? client_mtu : ATT_MAX_VALUE_LEN;
+
+    if (final_mtu < 23) {
+        final_mtu = 23;
+    }
+
+    buf = g_attrib_get_buffer(dev->attrib, &buf_size);
+    if (!buf || buf_size < 3) {
+        return;
+    }
+
+    buf[0] = ATT_OP_MTU_RESP;
+    buf[1] = final_mtu & 0xFF;
+    buf[2] = (final_mtu >> 8) & 0xFF;
+    rsp_len = 3;
+
+    g_attrib_send(dev->attrib, 0, buf, rsp_len, NULL, NULL, NULL);
+    g_attrib_set_mtu(dev->attrib, final_mtu);
+}
+
 
 static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen, gpointer user_data)
 {
@@ -195,7 +243,13 @@ static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
 	} else {
 		for (GSList *l = descriptors; l; l = l->next) {
 			struct gatt_desc *desc = l->data;
-			char_info_t info = {desc->uuid16, 0, 0, desc->handle};
+			char_info_t info;
+			memset(&info, 0, sizeof(char_info_t));
+			info.uuid = desc->uuid16;
+			info.properties = 0;
+			info.handle = 0;
+			info.value_handle = desc->handle;
+			strncpy(info.uuid128, desc->uuid, sizeof(info.uuid128) - 1);
 			dev->evh(EVENT_UUID, desc->handle, sizeof(info), &info, dev);
 		}
 		dev->evh(EVENT_UUID, 0, 0, NULL, dev);
@@ -211,7 +265,12 @@ static void char_discovered_cb(uint8_t status, GSList *characteristics, void *us
 	} else {
 		for (GSList *l = characteristics; l; l = l->next) {
 			struct gatt_char *chars = l->data;
-			char_info_t info = {0, chars->properties, chars->handle, chars->value_handle};
+			char_info_t info;
+			memset(&info, 0, sizeof(char_info_t));
+			info.properties = chars->properties;
+			info.handle = chars->handle;
+			info.value_handle = chars->value_handle;
+			strncpy(info.uuid128, chars->uuid, sizeof(info.uuid128) - 1);
 			dev->evh(EVENT_UUID, chars->handle, sizeof(info), &info, dev);
 		}
 		dev->evh(EVENT_UUID, 0, 0, NULL, dev);
@@ -264,6 +323,7 @@ void lble_listen(DEVHANDLER devh)
 	if (!dev || dev->conn_state != STATE_CONNECTED) {
 		return;
 	}
+	g_attrib_register(dev->attrib, ATT_OP_MTU_REQ, GATTRIB_ALL_HANDLES, mtu_handler, dev, NULL);
 	g_attrib_register(dev->attrib, ATT_OP_HANDLE_NOTIFY, GATTRIB_ALL_HANDLES, events_handler, dev, NULL);
 //	g_attrib_register(dev->attrib, ATT_OP_HANDLE_IND, GATTRIB_ALL_HANDLES, events_handler, dev, NULL);
 }

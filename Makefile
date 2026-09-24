@@ -1,5 +1,5 @@
-VERSION = 1
-SUBVERSION = 1
+VERSION = 2
+SUBVERSION = 0
 PATCH = 0
 
 TARGET0 = libble.so
@@ -33,7 +33,7 @@ PROGCPPFLAGS += -I/usr/include/bluetooth
 LDFLAGS += $(shell pkg-config --libs $(PKG-CONFIG))
 CPPFLAGS += $(PROGCPPFLAGS)
 
-all: $(TARGET) motion info
+all: $(TARGET) motion #info
 
 $(TARGET): $(LIB_SRCS) $(IMPORT_SRCS)
 	$(CC) -shared -L. $(CFLAGS) $(CPPFLAGS) -fPIC -o $@ $(LIB_SRCS) $(IMPORT_SRCS) $(LDFLAGS)
@@ -44,11 +44,11 @@ $(TARGET): $(LIB_SRCS) $(IMPORT_SRCS)
 motion: src/motion.c src/vecs.c $(TARGET)
 	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ src/motion.c src/vecs.c -lble $(PROGCPPFLAGS) $(LDFLAGS)
 
-info: src/info.c src/vecs.c $(TARGET)
-	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ src/info.c src/vecs.c -lble $(PROGCPPFLAGS) $(LDFLAGS)
+#info: src/info.c src/vecs.c $(TARGET)
+#	$(CC) -L. -Wl,-rpath=. -Wall -I./lib -o $@ src/info.c src/vecs.c -lble $(PROGCPPFLAGS) $(LDFLAGS)
 
 clean:
-	rm -f libble.so libble.so.* motion info
+	rm -f libble.so libble.so.* motion #info
 
 install: $(TARGET)
 	@test -d $(DESTDIR)/usr/lib/x86_64-linux-gnu || mkdir -p $(DESTDIR)/usr/lib/x86_64-linux-gnu

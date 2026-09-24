@@ -27,6 +27,7 @@ typedef enum {
 } handle_t;
 
 typedef struct {
+	char uuid128[38];
 	uint16_t uuid;
 	uint8_t properties;
 	uint16_t handle;

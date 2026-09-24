@@ -1,65 +1,58 @@
 #include "vecs.h"
 
 #include <glib.h>
+#include <string.h>
 
 GMainLoop *event_loop;
 vecs_connected_cb m_connected = NULL;
 vecs_notify_cb m_notify = NULL;
 
 char_info_t profiles[] = {
-		  {VECS_UUID_CHARGER_ADC, 0, 0, 0}
-		, {VECS_UUID_CHARGER_OFF, 0, 0, 0}
-		, {VECS_UUID_CHARGER_LOW, 0, 0, 0}
-		, {VECS_UUID_KEY_PRESS, 0, 0, 0}
-		, {VECS_UUID_KEY_BEEP, 0, 0, 0}
-		, {VECS_UUID_MOTION_ACCEL, 0, 0, 0}
-		, {VECS_UUID_MOTION_GYRO, 0, 0, 0}
-		, {VECS_UUID_MOTION_RATE, 0, 0, 0}
-		, {VECS_UUID_MOTION_NOTI, 0, 0, 0}
-		, {VECS_UUID_MOTION_TEMP, 0, 0, 0}
+          {UUID_NOTIFY, 0, 0, 0, 0}
+        , {UUID_WRITE, 0, 0, 0, 0}
 };
 
 const int profiles_count = sizeof(profiles)/sizeof(profiles[0]);
 
-uint16_t profile(uint16_t handle)
+char *profile(uint16_t handle)
 {
 	for (int i = 0; i < profiles_count; i++) {
 		if (profiles[i].value_handle == handle) {
-			return profiles[i].uuid;
+            return profiles[i].uuid128;
 		}
 	}
 	return 0;
 }
 
-uint16_t handle(uint16_t profile)
+uint16_t handle(const char *uuid128)
 {
 	for (int i = 0; i < profiles_count; i++) {
-		if (profiles[i].uuid == profile) {
+        if (strncmp(profiles[i].uuid128, uuid128, 38) == 0) {
 			return profiles[i].value_handle;
 		}
 	}
 	return 0;
 }
 
-uint16_t handle_notify(uint16_t profile)
+uint16_t handle_notify(const char *uuid128)
 {
-	uint16_t h = handle(profile);
+    uint16_t h = handle(uuid128);
 	return h ? h + 1 : h;
 }
 
-void vecs_notify(DEVHANDLER devh, uint16_t uuid, uint8_t enable)
+void vecs_notify(DEVHANDLER devh, char *uuid, uint8_t enable)
 {
 	lble_write(devh, handle_notify(uuid), 2, enable ? (uint8_t *)"\x01\x00" : (uint8_t *)"\x00\x00");
 }
 
-void vecs_request(DEVHANDLER devh, uint16_t uuid)
+void vecs_request(DEVHANDLER devh, char *uuid)
 {
-	lble_request(devh, handle(uuid));
+    lble_request(devh, handle(uuid));
 }
 
-void vecs_write(DEVHANDLER devh, uint16_t uuid, uint8_t len, void *data)
+void vecs_write(DEVHANDLER devh, char *uuid128, uint8_t len, void *data)
 {
-	lble_write(devh, handle(uuid), len, data);
+    lble_write(devh, handle(uuid128), len, data);
 }
 
 void quit()
@@ -119,33 +112,15 @@ void notify_handler(event_t event, uint16_t value_handle, uint8_t len, const voi
 		case EVENT_UUID:
 			if (data) {
 				char_info_t *info = (char_info_t *)data;
-				if (info->uuid) {
-					for (int i = 0; i < profiles_count; i++) {
-						if (profiles[i].uuid == info->uuid) {
-							profiles[i].value_handle = value_handle;
-							break;
-						}
-					}
-				} else {
-					for (int i = 0; i < profiles_count; i++) {
-						if (profiles[i].value_handle == info->value_handle) {
-							profiles[i].properties = info->properties;
-							profiles[i].handle = info->handle;
-							printf("UUID: %.4x, Value handle: %.4x, Handle: 0x%.4x\n", profiles[i].uuid, info->value_handle, info->handle);
-						break;
-						}
-					}
-				}
-			} else {
-				if (discover) {
-					if (--discover) {
-						printf("Discover characteristics\n");
-						lble_discover_char(devh);
-					} else {
-						m_connected(devh);
-					}
-				}
-			}
+                for (int i = 0; i < profiles_count; i++) {
+                    if (strncmp(profiles[i].uuid128, info->uuid128, 38) == 0) {
+                        profiles[i].value_handle = value_handle;
+                        break;
+                    }
+                }
+            } else {
+                m_connected(devh);
+            }
 			break;
 	}
 }
