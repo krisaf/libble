@@ -1,0 +1,26 @@
+Source: libble
+Section: unknown
+Priority: optional
+Maintainer: Denis Sirotkin <denis@demitel.ru>
+Build-Depends: debhelper (>=11~), libbluetooth-dev
+Standards-Version: 4.1.4
+Homepage: https://github.com/krisaf/libble
+
+Package: libble
+Section: libs
+Architecture: any
+Multi-Arch: same
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: library for using Bluetooth LE
+ Library for using Bluetooth LE
+
+Package: libble-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: libble (= ${binary:Version}), ${misc:Depends}
+Suggests: pkgconf
+Description: library for using Bluetooth LE
+ Library for using Bluetooth LE
+ .
+ This package contains the development environment.

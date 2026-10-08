@@ -1,0 +1,11 @@
+libble (1.1.0-1) UNRELEASED; urgency=low
+
+  * Many improvements.
+
+ -- Denis Sirotkin <denis@demitel.ru>  Thu, 10 Aug 2023 08:16:37 +0500
+
+libble (1.0.0-1) UNRELEASED; urgency=low
+
+  * Initial release.
+
+ -- Denis Sirotkin <denis@demitel.ru>  Thu, 04 Jul 2019 11:10:54 +0500

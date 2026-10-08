@@ -17,7 +17,7 @@ IMPORT_SRCS += $(addprefix $(BLUEZ_PATH)/, $(BLUEZ_SRCS))
 
 LIB_SRCS = lib/libble.c
 
-INSTALL_PROGRAM = install -m 755 -p
+INSTALL_PROGRAM = install -p
 SYMLINK = ln -f -s
 
 CC = gcc
@@ -51,8 +51,12 @@ clean:
 	rm -f libble.so libble.so.* motion info
 
 install: $(TARGET)
-	@test -d $(DESTDIR)/usr/lib || mkdir -p $(DESTDIR)/usr/lib
-	-$(INSTALL) $(TARGET) $(DESTDIR)/usr/lib/$(TARGET)
-	-$(SYMLINK) $(TARGET) $(DESTDIR)/usr/lib/$(TARGET0)
-	-$(SYMLINK) $(TARGET) $(DESTDIR)/usr/lib/$(TARGET1)
-	-$(SYMLINK) $(TARGET) $(DESTDIR)/usr/lib/$(TARGET2)
+	@test -d $(DESTDIR)/usr/lib/x86_64-linux-gnu || mkdir -p $(DESTDIR)/usr/lib/x86_64-linux-gnu
+	-$(INSTALL) -m 755 $(TARGET) $(DESTDIR)/usr/lib/x86_64-linux-gnu/$(TARGET)
+	-$(SYMLINK) $(TARGET) $(DESTDIR)/usr/lib/x86_64-linux-gnu/$(TARGET0)
+	-$(SYMLINK) $(TARGET) $(DESTDIR)/usr/lib/x86_64-linux-gnu/$(TARGET1)
+	-$(SYMLINK) $(TARGET) $(DESTDIR)/usr/lib/x86_64-linux-gnu/$(TARGET2)
+	@test -d $(DESTDIR)/usr/lib/x86_64-linux-gnu/pkgconfig || mkdir -p $(DESTDIR)/usr/lib/x86_64-linux-gnu/pkgconfig
+	-$(INSTALL) -m 644 rtble.pc $(DESTDIR)/usr/lib/x86_64-linux-gnu/pkgconfig/
+	@test -d $(DESTDIR)/usr/include/ble || mkdir -p $(DESTDIR)/usr/include/ble
+	-$(INSTALL) -m 644 lib/*.h $(DESTDIR)/usr/include/ble
